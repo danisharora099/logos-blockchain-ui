@@ -91,7 +91,9 @@ QtObject {
     readonly property bool joining: root.blendState === BlockchainBackend.BlendPending
                                     || root.blendState === BlockchainBackend.BlendActivating
     readonly property int step: root.blendState === BlockchainBackend.BlendActivating ? 1 : 0
-    readonly property int activeFrom: root.declaration ? root.declaration.active_from_epoch : -1
+    readonly property int activeFrom: root.declaration
+                                      && root.declaration.active_from_epoch !== undefined
+                                      ? root.declaration.active_from_epoch : -1
     // Ticks while the stepper shows, so the countdown moves.
     property real now: Date.now()
     // "~20h" / "~4 min" until activeFrom starts; empty when the epoch

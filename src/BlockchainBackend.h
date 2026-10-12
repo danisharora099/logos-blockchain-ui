@@ -117,6 +117,7 @@ public slots:
     QVariantMap getKeystoreKeys(QString configPath) override;
     QVariantMap joinBlendCore(QString locator, QString stakeNoteId) override;
     QVariantMap withdrawBlendCore() override;
+    QVariantMap signMessage(QString domain, QString payloadHex) override;
     QVariantMap getBlendReachability() override;
 
 

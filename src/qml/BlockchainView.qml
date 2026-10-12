@@ -181,6 +181,84 @@ Rectangle {
         onLeaveRequested: _d.leaveBlend()
     }
 
+    // ---- node.sign_referral_*: other apps ask the node to sign ----
+
+    SignRequestState {
+        id: signRequests
+        nodeRunning: root.nodeRunning
+        nodeStarting: !!root.backend && root.backend.status === BlockchainBackend.Starting
+        canStartNode: root.hasConfig
+        signingKey: root.backend && root.backend.blendConfig.provider_id
+                    ? root.backend.blendConfig.provider_id : ""
+        onCurrentChanged: current !== null ? signMessageDialog.open() : signMessageDialog.close()
+    }
+
+    Connections {
+        target: logos
+        function onIntentRequested(requestId, intent, params, requesterName) {
+            if (signRequests.isKnown(intent))
+                signRequests.add(requestId, intent, params, requesterName)
+        }
+    }
+
+    SignMessageDialog {
+        id: signMessageDialog
+        objectName: "signMessageDialog"
+        request: signRequests
+
+        onStartNodeRequested: if (root.backend) root.backend.startBlockchain()
+        onDeclineRequested: {
+            logos.respond(signRequests.requestId, false, {},
+                          signRequests.malformed ? "bad_request" : "cancelled")
+            signRequests.next()
+        }
+        onSignRequested: signConfirmDialog.open()
+    }
+
+    SignConfirmDialog {
+        id: signConfirmDialog
+        requester: signRequests.requester
+        canConfirm: signRequests.canSign
+
+        // A failure stays on the signing dialog so the user can retry or decline.
+        onConfirmed: {
+            if (!root.backend || !signRequests.canSign)
+                return
+            const requestId = signRequests.requestId
+            const built = signRequests.built
+            signRequests.busy = true
+            signRequests.actionError = ""
+            logos.watch(
+                root.backend.signMessage(built.domain, built.payloadHex),
+                function(result) {
+                    if (signRequests.requestId !== requestId)
+                        return
+                    if (result.success && result.value.public_key !== signRequests.signingKey.toLowerCase()) {
+                        signRequests.busy = false
+                        signRequests.actionError = qsTr("The node signed with a different key than its config names.")
+                        return
+                    }
+                    if (result.success) {
+                        logos.respond(requestId, true,
+                                      { signature: result.value.signature,
+                                        public_key: result.value.public_key,
+                                        payload_hex: built.payloadHex }, "")
+                        signRequests.next()
+                    } else {
+                        signRequests.busy = false
+                        signRequests.actionError = result.error
+                    }
+                },
+                function(error) {
+                    if (signRequests.requestId !== requestId)
+                        return
+                    signRequests.busy = false
+                    signRequests.actionError = error
+                }
+            )
+        }
+    }
+
 
     // Self libp2p peer id, derived from the selected user config (no running
     // node required). Refreshed when ready and whenever the config changes.

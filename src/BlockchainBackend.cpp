@@ -1410,6 +1410,18 @@ QVariantMap BlockchainBackend::withdrawBlendCore()
     return result::toVariantMap(LogosResult{true, jsonObjectOf(r), QVariant()});
 }
 
+QVariantMap BlockchainBackend::signMessage(QString domain, QString payloadHex)
+{
+    if (!m_blockchainClient || status() != Running)
+        return result::toVariantMap(result::err(tr("The node is not running.")));
+
+    const LogosResult r = result::toLogosResult(m_blockchainClient->invokeRemoteMethod(
+        BLOCKCHAIN_MODULE_NAME, QStringLiteral("sign_message"), domain, payloadHex));
+    if (!r.success)
+        return result::toVariantMap(r);
+    return result::toVariantMap(LogosResult{true, jsonObjectOf(r), QVariant()});
+}
+
 // The value is the parsed object; not being Online yet is an answer too, an
 // empty one: nothing has been checked.
 QVariantMap BlockchainBackend::getBlendReachability()

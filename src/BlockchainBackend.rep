@@ -267,6 +267,7 @@ class BlockchainBackend
     SLOT(QVariantMap joinBlendCore(QString locator, QString stakeNoteId))
     SLOT(QVariantMap withdrawBlendCore())
     SLOT(QVariantMap getBlendReachability())
+    SLOT(QVariantMap signMessage(QString domain, QString payloadHex))
     SLOT(void clearBlocks())
     SLOT(void copyToClipboard(QString text))
 }

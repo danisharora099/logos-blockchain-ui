@@ -3,3 +3,6 @@ BlendCoreDialog 1.0 BlendCoreDialog.qml
 BlendCoreState 1.0 BlendCoreState.qml
 BlendJoinPages 1.0 BlendJoinPages.qml
 BlendStatusPages 1.0 BlendStatusPages.qml
+SignMessageDialog 1.0 SignMessageDialog.qml
+SignRequestState 1.0 SignRequestState.qml
+SignConfirmDialog 1.0 SignConfirmDialog.qml
