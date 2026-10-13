@@ -177,6 +177,15 @@ sections:
                 — an empty list is an empty list, not a fallback to the
                 deployment's own peers.
 
+            # metadata.json ships no bootstrap_peers, so the field starts empty
+            # and Generate stays disabled until one is entered. 203.0.113.0/24
+            # is TEST-NET-3: generating only writes the config, never dials it.
+            - name: "Enter a bootstrap peer"
+              action: set_text
+              find_by: "objectName"
+              find_value: "networkPeersField"
+              value: "/ip4/203.0.113.10/udp/3000/quic-v1/p2p/12D3KooWh82pJGF9p7kpzb6eU326EFZf2cDnimbTFVeJtx1qtBmU"
+
             - name: "Generate the config"
               action: click_object
               find_by: "objectName"
@@ -239,36 +248,45 @@ sections:
               find_by: "objectName"
               find_value: "onboardingAdvanceButton"
 
-            - name: "Node view shows the config, node not started"
+            # Finishing setup starts the node. Its state from here depends on
+            # reaching a peer, which the TEST-NET peer above never answers —
+            # starting, catching up, or stopped with an error — so nothing
+            # below asserts on the node's state, only on what each view shows
+            # whatever that state is. The lane's later stages ("Aged",
+            # "Proposing") keep their plain labels until a node gets that far.
+            - name: "Finishing setup starts the node"
               action: wait_for
-              texts: ["Not started"]
+              texts: ["Aged", "Proposing"]
               timeout: 8000
               screenshot: "blockchain-ui-node.png"
               text: |
+                Finishing setup starts the node: the flow ends on the dashboard
+                with the node already coming up, rather than leaving the
+                operator one more button away from it.
+
                 The dashboard opens on a full-width status hero whose headline
-                *is* the state: it reads **Not started** — the operator starts
-                the node explicitly; generating or selecting a config never
-                starts one.
+                *is* the state — **Starting**, then **Online** once it follows
+                the chain. The line beside the headline carries the node's own
+                explanation when something goes wrong, so a failed start shows a
+                real cause rather than a generic error. Underneath it runs the
+                lifecycle lane (**Started → Online → Funded → Aged →
+                Proposing**), which lights up one stage at a time as the node
+                comes up.
 
-                The line beside the headline carries the node's own explanation
-                when something goes wrong, so a failed start shows a real cause
-                rather than a generic error. Underneath it runs the lifecycle
-                lane (**Started → Online**), which lights up one stage at a time
-                as the node comes up.
-
-            - name: "Every section is reachable without a node"
+            - name: "Every section is reachable while the node comes up"
               action: wait_for
               texts: ["Node", "Rewards", "Explorer", "Wallet", "Mining", "Settings"]
               timeout: 6000
               screenshot: "blockchain-ui-nav.png"
               text: |
                 Navigation is a tab bar under the node header, one tab per
-                section. Every tab is open before the node is up: a section that
-                cannot answer says why, rather than being unreachable. Each one
-                carries the same banner — "Start the node from the Node tab", or
-                "The node is still catching up" when it is already running — so
-                the reason is specific rather than a disabled tab the user has to
-                guess at. The actions inside stay disabled either way.
+                section. Every tab is open before the node is online: a section
+                that cannot answer yet says why, rather than being unreachable.
+                Each one carries the same banner — "The node is starting…", "The
+                node is still catching up", or "Start the node from the Node
+                tab" once it is stopped — so the reason is specific rather than
+                a disabled tab the user has to guess at. The actions inside stay
+                disabled until the node can serve them.
 
                 This doc-test still stops here, because what the sections would
                 *show* needs a node bootstrapped against a live network.
@@ -300,16 +318,15 @@ sections:
 
             - name: "Rewards says why it is empty"
               action: wait_for
-              texts: ["Vouchers", "Ready to claim", "Awaiting payout", "History",
-                      "Start the node from the Node tab."]
+              texts: ["Vouchers", "Ready to claim", "Awaiting payout", "History"]
               timeout: 6000
               screenshot: "blockchain-ui-rewards-empty.png"
               text: |
                 Leader rewards. The two tiles are the pipeline — vouchers the
                 wallet can claim, and claims on their way to being paid —
-                over the history of what has settled. With no node all three
-                read empty, and the banner names the reason rather than leaving
-                a page of dashes to interpret.
+                over the history of what has settled. Until the node is online
+                all three read empty, and the banner names the reason rather
+                than leaving a page of dashes to interpret.
 
             - name: "Mining opens"
               action: click_object
@@ -318,8 +335,7 @@ sections:
 
             - name: "Mining shows tickets and its own history"
               action: wait_for
-              texts: ["Tickets", "Ready to claim", "Awaiting payout", "History",
-                      "Start the node from the Node tab."]
+              texts: ["Tickets", "Ready to claim", "Awaiting payout", "History"]
               timeout: 6000
               screenshot: "blockchain-ui-mining-empty.png"
               text: |
@@ -335,15 +351,14 @@ sections:
 
             - name: "Wallet holds three sections behind one tab"
               action: wait_for
-              texts: ["Accounts", "Transfer", "Channel Deposit",
-                      "Start the node from the Node tab."]
+              texts: ["Accounts", "Transfer", "Channel Deposit"]
               timeout: 6000
               screenshot: "blockchain-ui-wallet-empty.png"
               text: |
                 One tab, three sections picked from the left menu. All three
                 share the same account list, so all three are equally empty
-                without a node — and each says so rather than offering a form
-                that would fail on submit.
+                until the node is online — and each says so rather than
+                offering a form that would fail on submit.
 
             - name: "Explorer opens"
               action: click_object
@@ -352,8 +367,7 @@ sections:
 
             - name: "Explorer renders its lookup and block table"
               action: wait_for
-              texts: ["Search a block id or transaction hash",
-                      "Start the node to see blocks arrive."]
+              texts: ["Search a block id or transaction hash"]
               timeout: 6000
               screenshot: "blockchain-ui-explorer-empty.png"
               text: |
