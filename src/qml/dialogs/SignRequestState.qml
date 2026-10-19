@@ -2,17 +2,13 @@ import QtQuick
 
 import "signPayload.js" as SignPayload
 
-// Signing requests from other apps (node.sign_referral_*), one shown at a
-// time, and everything the signing dialog derives from the current one. No
+// Requests from other apps (node.sign_referral_*, node.referral_receipt_secret), one
+// shown at a time, and everything the signing dialog derives from the current one. No
 // backend, no intents: the host feeds it requests and answers them.
 QtObject {
     id: root
 
     // ---- inputs, set by the host ----
-    property bool nodeRunning: false
-    property bool nodeStarting: false
-    // False while there is no config to start a node from.
-    property bool canStartNode: true
     // The BlendSigning key from the config (provider_id); "" if unread.
     property string signingKey: ""
     property bool busy: false
@@ -30,7 +26,7 @@ QtObject {
     readonly property string requester: root.current && root.current.requesterName.length > 0
                                         ? root.current.requesterName : qsTr("Basecamp")
 
-    // { problem, domain, rows, message, payloadHex }
+    // { problem, domain, secret, rows, message, payloadHex }
     readonly property var built: root.current
                                  ? SignPayload.build(root.current.intent, root.current.params,
                                                      root.signingKey)
@@ -38,11 +34,14 @@ QtObject {
     readonly property bool valid: root.current !== null && root.built.problem === ""
     // A request that can never be signed, as opposed to one this node can't sign yet.
     readonly property bool malformed: root.built.problem === "intent" || root.built.problem === "params"
+    // The receipt secret: shared, not signed.
+    readonly property bool secret: root.valid && root.built.secret === true
 
     readonly property string purpose: {
         switch (root.intent) {
         case "node.sign_referral_enrolment": return qsTr("To join the referral program")
         case "node.sign_referral_payout":    return qsTr("For your referral payout code")
+        case "node.referral_receipt_secret": return qsTr("To cash out your referral points")
         default:                             return ""
         }
     }
@@ -55,6 +54,9 @@ QtObject {
         case "node.sign_referral_payout":
             return qsTr("%1 asks your node to sign your payout code, so only this node can "
                         + "redeem it.").arg(root.requester)
+        case "node.referral_receipt_secret":
+            return qsTr("%1 asks for your node's referral receipt key. It's used to cash out "
+                        + "your referral points and to find your receipts again.").arg(root.requester)
         default:
             return ""
         }
@@ -68,9 +70,12 @@ QtObject {
         }
     }
 
-    // Signing needs the node's key, so a stopped node can't sign; the dialog
-    // waits for it instead.
-    readonly property bool canSign: root.valid && root.nodeRunning && !root.busy
+    // The key comes from the node's keystore file, so the node needn't be running.
+    readonly property bool canSign: root.valid && !root.busy
+
+    function nodeKey(configKey: var, keystoreKey: var): string {
+        return SignPayload.nodeKey(configKey, keystoreKey)
+    }
 
     function isKnown(intent: string): bool {
         return SignPayload.isKnown(intent)
