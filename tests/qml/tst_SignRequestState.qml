@@ -212,6 +212,25 @@ TestCase {
         compare(s.canSign, true)
     }
 
+    // The receipt key is asked for to cash out, or to find past cash-outs (Uplink says which
+    // with `purpose`); the dialog used to say "cash out" for both.
+    function test_the_receipt_key_request_is_worded_by_its_purpose() {
+        const cash = make()
+        cash.add("r1", "node.referral_receipt_secret", {}, "uplink_ui")
+        compare(cash.purpose, "To cash out your referral points")
+
+        const find = make()
+        find.add("r1", "node.referral_receipt_secret", { purpose: "find_cash_outs" }, "uplink_ui")
+        compare(find.purpose, "To find your past cash-outs")
+        verify(find.summary.indexOf("cash-outs you made before") >= 0, find.summary)
+        compare(find.valid, true)
+        compare(find.canSign, true)
+
+        const unknown = make()
+        unknown.add("r1", "node.referral_receipt_secret", { purpose: "something_newer" }, "uplink_ui")
+        compare(unknown.purpose, "To cash out your referral points")
+    }
+
     // ---- when signing is allowed ----
 
     // The key comes from the keystore file: a stopped node signs too.

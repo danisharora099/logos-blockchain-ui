@@ -25,7 +25,12 @@
         { "name": "blinding_factor", "type": "string", "required": true }
       ]
     },
-    { "intent": "node.referral_receipt_secret", "params": [] }
+    {
+      "intent": "node.referral_receipt_secret",
+      "params": [
+        { "name": "purpose", "type": "string", "required": false }
+      ]
+    }
   ],
   "bootstrap_peers": [],
   "lez_channel_id": "",

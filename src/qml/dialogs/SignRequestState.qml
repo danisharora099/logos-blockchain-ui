@@ -22,6 +22,11 @@ QtObject {
     // ---- derived ----
     readonly property string requestId: root.current ? root.current.requestId : ""
     readonly property string intent: root.current ? root.current.intent : ""
+    // Why the receipt secret is asked for: "find_cash_outs" (cash-outs made before this
+    // Basecamp's data was reset), else cashing out, as for an app that doesn't say.
+    readonly property bool findingCashOuts: root.intent === "node.referral_receipt_secret"
+                                            && !!root.current && !!root.current.params
+                                            && root.current.params.purpose === "find_cash_outs"
     // Host-attested; empty when the shell itself asks.
     readonly property string requester: root.current && root.current.requesterName.length > 0
                                         ? root.current.requesterName : qsTr("Basecamp")
@@ -41,7 +46,9 @@ QtObject {
         switch (root.intent) {
         case "node.sign_referral_enrolment": return qsTr("To join the referral program")
         case "node.sign_referral_payout":    return qsTr("For your referral payout code")
-        case "node.referral_receipt_secret": return qsTr("To cash out your referral points")
+        case "node.referral_receipt_secret":
+            return root.findingCashOuts ? qsTr("To find your past cash-outs")
+                                        : qsTr("To cash out your referral points")
         default:                             return ""
         }
     }
@@ -55,8 +62,11 @@ QtObject {
             return qsTr("%1 asks your node to sign your payout code, so only this node can "
                         + "redeem it.").arg(root.requester)
         case "node.referral_receipt_secret":
-            return qsTr("%1 asks for your node's referral receipt key. It's used to cash out "
-                        + "your referral points and to find your receipts again.").arg(root.requester)
+            return root.findingCashOuts
+                ? qsTr("%1 asks for your node's referral receipt key, to find the cash-outs you "
+                       + "made before on chain so you can get their payout codes.").arg(root.requester)
+                : qsTr("%1 asks for your node's referral receipt key. It's used to cash out "
+                       + "your referral points and to find your receipts again.").arg(root.requester)
         default:
             return ""
         }
